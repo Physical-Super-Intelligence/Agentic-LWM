@@ -1,7 +1,5 @@
 # Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model
 
-A Non-Generative Dual-System Framework for Physical Robot Planning and Control.
-
 [![Target RSS 2027](https://img.shields.io/badge/Target-RSS%202027-blue.svg)](https://roboticsconference.org/)
 [![Project Page](https://img.shields.io/badge/Project%20Page-Agentic--LWM-green.svg)](https://physical-super-intelligence.github.io/Agentic-LWM/)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/release/python-3110/)
