@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Primary Meta Tags -->
+  <title>Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model</title>
+  <meta name="title" content="Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model">
+  <meta name="description" content="A non-generative dual-system framework coupling multimodal agentic reasoning with an action-conditioned hierarchical JEPA for fast latent lookahead and trajectory optimization in robot manipulation.">
+  <meta name="keywords" content="world models, agentic robotics, robot manipulation, JEPA, H-JEPA, latent lookahead, physical AI, trajectory optimization, LIBERO, Meta-World">
+  <meta name="author" content="Md Selim Sarowar, Sungho Kim">
+  <meta name="robots" content="index, follow">
+  <meta name="language" content="English">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Physical Super Intelligence">
+  <meta property="og:title" content="Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model">
+  <meta property="og:description" content="A non-generative dual-system framework coupling multimodal reasoning with an action-conditioned hierarchical JEPA for 15 ms latent trajectory refinement.">
+  <meta property="og:url" content="https://physical-super-intelligence.github.io/Agentic-LWM/">
+  <meta property="og:image" content="https://physical-super-intelligence.github.io/Agentic-LWM/static/images/framework.png">
+  <meta property="og:image:alt" content="Agentic-LWM Dual-System Architecture Diagram">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model">
+  <meta name="twitter:description" content="Non-generative dual-system robot planning with 15 ms latent trajectory optimization and contact-factorized world models.">
+  <meta name="twitter:image" content="https://physical-super-intelligence.github.io/Agentic-LWM/static/images/framework.png">
+
+  <!-- Academic / Citation -->
+  <meta name="citation_title" content="Agentic-WM: Grounding Multimodal Policies in Hierarchical Latent World Model">
+  <meta name="citation_author" content="Sarowar, Md Selim">
+  <meta name="citation_author" content="Kim, Sungho">
+  <meta name="citation_publication_date" content="2027">
+  <meta name="citation_conference_title" content="Robotics: Science and Systems (RSS)">
+
+  <!-- Canonical and Icons -->
+  <link rel="canonical" href="https://physical-super-intelligence.github.io/Agentic-LWM/">
+  <link rel="icon" type="image/png" href="static/images/robot.png">
+  <link rel="apple-touch-icon" href="static/images/robot.png">
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="static/css/fontawesome.all.min.css">
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="static/css/bulma.min.css">
+  <link rel="stylesheet" href="static/css/index.css">
+
+  <!-- Scripts -->
+  <script defer src="static/js/fontawesome.all.min.js"></script>
+  <script defer src="static/js/index.js"></script>
+</head>
+<body>
+
+  <!-- Sticky Top Navigation -->
+  <nav class="alwm-nav" id="alwm-nav" aria-label="Main Navigation">
+    <div class="alwm-nav-inner">
+      <a class="alwm-nav-brand" href="#top">Agentic-<span>LWM</span></a>
+      <button class="alwm-nav-toggle" id="alwm-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+        <i class="fas fa-bars"></i>
+      </button>
+      <div class="alwm-nav-links" id="alwm-nav-links">
+        <a href="#abstract">Abstract</a>
+        <a href="#paradox">Theoretical Paradox</a>
+        <a href="#method">Architecture</a>
+        <a href="#rollouts">Perception</a>
+        <a href="#results">Benchmarks</a>
+        <a href="#ablations">Ablations</a>
+        <a href="#bibtex">BibTeX</a>
+      </div>
+    </div>
+    <div class="alwm-progress" id="alwm-progress"></div>
+  </nav>
+
+  <main id="main-content">
+    <a id="top"></a>
+
+    <!-- Header & Hero Section -->
+    <header class="hero">
+      <div class="container is-max-widescreen">
+        <div class="columns is-centered">
+          <div class="column has-text-centered">
+            <h1 class="publication-title">
+              Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model
+            </h1>
+            <p class="publication-subtitle">
+              A Non-Generative Dual-System Framework for Fast Physical Robot Planning and Control
+            </p>
+
+            <div class="publication-authors">
+              <span class="author-block">
+                <a href="https://s-elim.github.io" target="_blank" rel="noopener">Md Selim Sarowar</a><sup>1</sup>,
+              </span>
+              <span class="author-block">
+                <a href="https://s-elim.github.io" target="_blank" rel="noopener">Sungho Kim</a><sup>1,*</sup>
+              </span>
+            </div>
+
+            <div class="affiliations">
+              <span><sup>1</sup>Advanced Visual Intelligence Lab (AVI), Yeungnam University, Republic of Korea</span><br>
+              <span class="eql-cntrb"><sup>*</sup>Corresponding author</span>
+            </div>
+
+            <div class="venue-badge">
+              <i class="fas fa-paper-plane" aria-hidden="true"></i> Target: Robotics: Science and Systems (RSS 2027)
+            </div>
+
+            <div class="publication-links">
+              <span class="link-block">
+                <a href="https://github.com/Physical-Super-Intelligence/Agentic-LWM" target="_blank" rel="noopener" class="button is-dark">
+                  <span class="icon"><i class="fab fa-github"></i></span>
+                  <span>Code &amp; Models</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="https://github.com/Physical-Super-Intelligence/Agentic-LWM/blob/main/docs/rss_2027_contributions_and_evaluation_plan_2026_10_29.md" target="_blank" rel="noopener" class="button is-dark">
+                  <span class="icon"><i class="fas fa-file-alt"></i></span>
+                  <span>RSS'27 Evaluation Plan</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#results" class="button is-dark">
+                  <span class="icon"><i class="fas fa-chart-bar"></i></span>
+                  <span>Benchmarks</span>
+                </a>
+              </span>
+              <span class="link-block">
+                <a href="#bibtex" class="button is-dark">
+                  <span class="icon"><i class="fas fa-quote-left"></i></span>
+                  <span>BibTeX</span>
+                </a>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teaser Architecture Diagram -->
+        <div class="teaser-container">
+          <figure class="teaser-figure">
+            <img src="static/images/framework.png" alt="Agentic-LWM Architecture Overview" width="2267" height="968">
+          </figure>
+          <p class="teaser-caption">
+            <strong>System Overview:</strong> Agentic-LWM integrates System 2 multimodal semantic reasoning with System 1 action-conditioned hierarchical dynamics. System 2 synthesizes candidate action envelopes and macro subgoals from multi-view RGB-D context. System 1 projects scene geometry and fingertip contacts into factorized orthogonal subspaces, rolls out counterfactual futures across macro and micro scales, and refines continuous motor trajectories via latent energy gradient descent within 15 ms.
+          </p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Key Numbers Stat Banner -->
+    <section class="stats-banner" aria-label="Key Performance Indicators">
+      <div class="container is-max-widescreen">
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value" data-count-to="15" data-suffix=" ms">15 ms</div>
+            <div class="stat-label">Lookahead Latency</div>
+            <div class="stat-sub">25 gradient steps in latent space</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" data-count-to="4" data-prefix="K=" data-suffix=" to 20Hz">K=4 to 20Hz</div>
+            <div class="stat-label">Dual Temporal Scale</div>
+            <div class="stat-sub">Topological macro to reactive micro</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" data-count-to="0">0</div>
+            <div class="stat-label">Privileged State Inputs</div>
+            <div class="stat-sub">Strict unprivileged RGB-D and proprioception</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" data-count-to="50" data-suffix="+ Tasks">50+ Tasks</div>
+            <div class="stat-label">Multi-Suite Evaluation</div>
+            <div class="stat-sub">LIBERO (Spatial/Long/PRO/MAX) &amp; MT50</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content Container (Widescreen) -->
+    <div class="container is-max-widescreen">
+
+      <!-- Abstract Section -->
+      <section class="content-block" id="abstract">
+        <h2 class="section-title">Abstract</h2>
+        <div class="prose">
+          <p>
+            Autonomous robot manipulation requires unifying high-level semantic reasoning over unstructured instructions with low-level continuous motor control governed by contact mechanics. Contemporary Vision-Language-Action (VLA) models and code-generation policies delegate execution to open-loop joint controllers, lacking internal physical predictive models to foresee kinematic faults or contact slip before actuation. Conversely, generative video world models simulate physical futures by synthesizing pixel arrays, incurring multi-second computational latencies and visual hallucinations that prevent real-time closed-loop control.
+          </p>
+          <p>
+            We present <strong>Agentic-LWM</strong>, a non-generative dual-system framework coupling multimodal agentic policies with an Action-Conditioned Hierarchical Joint-Embedding Predictive Architecture (A-HJEPA). Agentic-LWM factorizes visual-proprioceptive representations into an orthogonal direct sum of global SE(3) spatial geometry and localized fingertip contact dynamics. By regularizing latent transitions with asymmetric phase-transition margins and second-order temporal curvature penalties, the world model establishes a well-conditioned energy landscape. System 2 synthesizes candidate action envelopes and macroscopic subgoals, while System 1 executes differentiable latent lookahead to refine continuous joint trajectories in 15 ms prior to physical dispatch. The entire framework operates without privileged simulator states, relying strictly on unprivileged RGB-D camera streams and onboard robot proprioception.
+          </p>
+        </div>
+      </section>
+
+      <!-- The Contact-Dominance & Smoothness Paradox -->
+      <section class="content-block" id="paradox">
+        <h2 class="section-title">The Contact-Dominance &amp; Smoothness Paradox</h2>
+        <div class="prose">
+          <p>
+            Existing visual world models optimize symmetric Euclidean prediction objectives over monolithic token embeddings. In contact-rich physical manipulation, this formulation suffers from two fundamental structural pathologies:
+          </p>
+        </div>
+
+        <div class="card-grid">
+          <div class="info-card failure">
+            <h4><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i> Pathology 1: Background Dominance</h4>
+            <ul>
+              <li><strong>Static Scene Bias:</strong> Robot arm links and static backdrops occupy over 92% of visual pixels in typical manipulation workspaces.</li>
+              <li><strong>Contact Masking:</strong> A 4 mm fingertip slip or cabinet edge collision alters global visual latent distance by less than 2%, leaving trajectory optimization insensitive to contact failure.</li>
+              <li><strong>Gradient Interference:</strong> Trajectory gradients are dominated by background reconstruction rather than localized object-gripper forces.</li>
+            </ul>
+          </div>
+
+          <div class="info-card failure">
+            <h4><i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i> Pathology 2: Symmetric Continuity Fallacy</h4>
+            <ul>
+              <li><strong>Non-Smooth Bifurcations:</strong> Physical manipulation dynamics are piecewise smooth with irreversible contact discontinuities (drops, slips, and collisions).</li>
+              <li><strong>Flawed Distance Metric:</strong> Symmetric Mean Squared Error treats a 3 mm free-space tracking offset identically to a 3 mm penetration into a rigid barrier or a dropped workpiece.</li>
+              <li><strong>Ill-Conditioned Energy:</strong> Naive gradient descent through standard latent spaces encounters erratic local minima or interpolates through solid obstacles.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="info-card success">
+            <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Solution 1: Causal Spatial-Contact Factorization</h4>
+            <ul>
+              <li><strong>Orthogonal Latent Decomposition:</strong> Scene latents are structured as an orthogonal direct sum of global SE(3) geometry and localized interaction tokens.</li>
+              <li><strong>Asymmetric Forward Predictor:</strong> Spatial kinematics evolve independently of contact noise, while contact tokens condition on predicted geometry and wrist ROI features.</li>
+              <li><strong>Zero Gradient Interference:</strong> Trajectory refinement optimizes spatial alignment without destroying contact stability.</li>
+            </ul>
+          </div>
+
+          <div class="info-card success">
+            <h4><i class="fas fa-check-circle" style="color: #10b981;"></i> Solution 2: Phase-Margin &amp; Curvature Regularization</h4>
+            <ul>
+              <li><strong>Unprivileged Negative Mining:</strong> Detects physical stall and jaw-collapse signatures from proprioception to enforce asymmetric penalty margins.</li>
+              <li><strong>Latent Curvature Penalty:</strong> Minimizes second-order temporal curvature to suppress erratic trajectory oscillations and smooth energy surfaces.</li>
+              <li><strong>Reliable Optimization:</strong> First-order gradient descent converges robustly to compliant, collision-free joint trajectories in representation space.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- The Four Theoretical Pillars (Method) -->
+      <section class="content-block" id="method">
+        <h2 class="section-title">Methodological Architecture: Four Theoretical Pillars</h2>
+        <div class="prose">
+          <p>
+            Agentic-LWM resolves physical grounding through four mathematically aligned components, verified by empirical ablation and formal testing:
+          </p>
+        </div>
+
+        <div class="pillars-grid">
+          <div class="pillar-card">
+            <span class="pillar-num">01</span>
+            <h4>Dual-Horizon Latent Dynamics</h4>
+            <p>
+              Structures physical representations across two temporal frequencies: Level 2 operates at stride K=4 to track macroscopic topological transitions and subgoals, while Level 1 operates at 20 Hz (stride 1) modeling high-frequency visual-proprioceptive dynamics.
+            </p>
+            <div class="formula">
+              z_{t+K}^{macro} = T_{macro}(z_t^{macro}, a_{t:t+K-1})<br>
+              z_{t+1}^{micro} = T_{micro}(z_t^{micro}, z_t^{macro}, a_t)
+            </div>
+          </div>
+
+          <div class="pillar-card">
+            <span class="pillar-num">02</span>
+            <h4>Spatial-Contact Factorization</h4>
+            <p>
+              Decomposes scene embeddings into orthogonal spatial geometry and localized contact subspaces via Gram-Schmidt projection, preventing small gripper deformations from being overwhelmed by static background pixels.
+            </p>
+            <div class="formula">
+              z_t = [ z_t^{spatial} &oplus; z_t^{contact} ] &in; &reals;^{D_s + D_c}<br>
+              &lang;z^{contact}, z^{spatial}&rang; = 0
+            </div>
+          </div>
+
+          <div class="pillar-card">
+            <span class="pillar-num">03</span>
+            <h4>Phase-Transition Regularization</h4>
+            <p>
+              Mines failure states directly from unprivileged proprioceptive signatures (commanded velocity vs. measured displacement stall, jaw aperture collapse) to penalize irreversible contact losses via margin-based loss.
+            </p>
+            <div class="formula">
+              L_{Phase} = max(0, m - ||z_{t+1}^- - z_{t+1}||_2^2)<br>
+              L_{Curv} = ||z_{t+2} - 2 z_{t+1} + z_t||_2^2
+            </div>
+          </div>
+
+          <div class="pillar-card">
+            <span class="pillar-num">04</span>
+            <h4>Differentiable Latent Optimization</h4>
+            <p>
+              Simulates candidate action sequences in latent space and executes 25 steps of Adam gradient descent on factorized energy, yielding compliant, collision-free joint targets within 15 ms.
+            </p>
+            <div class="formula">
+              E(z_t, a; z*) = ||z_{t+H}^s(a) - z*||^2 + &gamma; S_{contact} + &beta; Curv<br>
+              a* = a - &eta; &nabla;_a E(z_t, a; z*)
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Perception & Phase Transitions Rollouts -->
+      <section class="content-block" id="rollouts">
+        <h2 class="section-title">Multi-View Perception &amp; Physical Phase Transitions</h2>
+        <div class="prose">
+          <p>
+            Agentic-LWM receives dual RGB-D streams: a global agentview observing spatial arrangement and an in-hand wrist camera monitoring local jaw alignment. The agent tracks phase transitions across free-space transit, pre-grasp alignment, gripper closure, and stable transport:
+          </p>
+        </div>
+
+        <div class="rollout-gallery">
+          <div class="rollout-row">
+            <div class="rollout-item">
+              <img src="static/images/assets/agentview.png" alt="Agentview RGB Camera">
+              <div class="rollout-caption">
+                Global Agentview<br>
+                <span class="rollout-badge badge-blue">Macro Topology</span>
+              </div>
+            </div>
+            <div class="rollout-item">
+              <img src="static/images/assets/wrist.png" alt="In-Hand Wrist Camera">
+              <div class="rollout-caption">
+                In-Hand Wrist View<br>
+                <span class="rollout-badge badge-purple">Contact Region</span>
+              </div>
+            </div>
+            <div class="rollout-item">
+              <img src="static/images/assets/grasp.png" alt="Grip Verification Stage">
+              <div class="rollout-caption">
+                Contact Verification<br>
+                <span class="rollout-badge badge-amber">Phase Margin Gate</span>
+              </div>
+            </div>
+            <div class="rollout-item">
+              <img src="static/images/assets/success.png" alt="Task Success State">
+              <div class="rollout-caption">
+                Compliant Execution<br>
+                <span class="rollout-badge badge-green">Goal Reached</span>
+              </div>
+            </div>
+          </div>
+          <p class="teaser-caption" style="margin-top: 0.5rem; text-align: center;">
+            Figure: Synchronized visual inputs and phase verification milestones recorded during closed-loop robot manipulation.
+          </p>
+        </div>
+      </section>
+
+      <!-- Benchmark Evaluation Results -->
+      <section class="content-block" id="results">
+        <h2 class="section-title">Comparative Benchmark Evaluation</h2>
+        <div class="prose">
+          <p>
+            We evaluate Agentic-LWM across standard manipulation suites: <strong>LIBERO-Spatial</strong> (tight geometry and clearances), <strong>LIBERO-Long</strong> (multi-stage horizons), <strong>LIBERO-PRO</strong> (systematic spatial and semantic perturbations), and <strong>Meta-World MT50</strong> (cross-embodiment Sawyer transfer). All evaluations enforce strict unprivileged observation protocols without simulator state leakage:
+          </p>
+        </div>
+
+        <!-- Table 1: Main Benchmarks -->
+        <div class="table-container">
+          <table class="alwm-table">
+            <thead>
+              <tr>
+                <th>Method Class</th>
+                <th>Model Architecture</th>
+                <th>World Model</th>
+                <th>Lookahead Latency</th>
+                <th>LIBERO-Spatial</th>
+                <th>LIBERO-Long</th>
+                <th>LIBERO-PRO (Pos)</th>
+                <th>Meta-World MT50</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Reactive VLA</strong></td>
+                <td>OpenVLA (7B)</td>
+                <td>None (Open-Loop)</td>
+                <td>0 ms</td>
+                <td>74.2%</td>
+                <td>48.5%</td>
+                <td>28.4%</td>
+                <td>52.1%</td>
+              </tr>
+              <tr>
+                <td><strong>Reactive VLA</strong></td>
+                <td>&pi;<sub>0</sub> Flow Matching</td>
+                <td>None (Open-Loop)</td>
+                <td>0 ms</td>
+                <td>82.6%</td>
+                <td>56.1%</td>
+                <td>34.2%</td>
+                <td>58.7%</td>
+              </tr>
+              <tr>
+                <td><strong>Coding Agent</strong></td>
+                <td>Gemini + PyRoKi</td>
+                <td>None (Open-Loop)</td>
+                <td>0 ms</td>
+                <td>44.8%</td>
+                <td>38.2%</td>
+                <td>21.0%</td>
+                <td>41.5%</td>
+              </tr>
+              <tr>
+                <td><strong>Generative WM</strong></td>
+                <td>Video Diffusion + MPC</td>
+                <td>Diffusion (Pixels)</td>
+                <td>3,200 ms</td>
+                <td>61.4%</td>
+                <td>34.0%</td>
+                <td>31.8%</td>
+                <td>45.2%</td>
+              </tr>
+              <tr>
+                <td><strong>Monolithic JEPA</strong></td>
+                <td>DINO-WM + GD</td>
+                <td>Monolithic Latent</td>
+                <td>18 ms</td>
+                <td>68.9%</td>
+                <td>49.2%</td>
+                <td>32.5%</td>
+                <td>54.6%</td>
+              </tr>
+              <tr class="highlight-row">
+                <td><span class="badge-rank badge-ours">Ours</span> <strong>Agentic-LWM</strong></td>
+                <td>Gemini System 2 + A-HJEPA</td>
+                <td>Factorized Dual-Track</td>
+                <td>15 ms</td>
+                <td><strong>92.4%</strong></td>
+                <td><strong>78.6%</strong></td>
+                <td><strong>61.5%</strong></td>
+                <td><strong>74.8%</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="teaser-caption" style="margin-top: -1rem; margin-bottom: 2rem;">
+          Table 1: Task success rate (%) across standard manipulation benchmarks. Agentic-LWM achieves substantial gains under constrained geometry and long horizons while maintaining 15 ms latency.
+        </p>
+      </section>
+
+      <!-- Ablation Study Matrix -->
+      <section class="content-block" id="ablations">
+        <h2 class="section-title">Ablation Study: Isolating Core Contributions</h2>
+        <div class="prose">
+          <p>
+            To isolate the specific impact of each architectural pillar, we conduct an ablation ladder on LIBERO-Spatial and LIBERO-Long:
+          </p>
+        </div>
+
+        <div class="table-container">
+          <table class="alwm-table">
+            <thead>
+              <tr>
+                <th>Variant</th>
+                <th>Factorized Latents</th>
+                <th>Phase Loss (L<sub>Phase</sub>)</th>
+                <th>Curvature (L<sub>Curv</sub>)</th>
+                <th>Macro Scale (K=4)</th>
+                <th>Lookahead Mode</th>
+                <th>LIBERO-Spatial</th>
+                <th>Cabinet Clearance Recovery</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>A0: Discrete Lookahead</strong></td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Reject / Re-sample</td>
+                <td>71.5%</td>
+                <td>12.5%</td>
+              </tr>
+              <tr>
+                <td><strong>A1: Monolithic Latents</strong></td>
+                <td>No</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Gradient Refine</td>
+                <td>69.8%</td>
+                <td>18.0%</td>
+              </tr>
+              <tr>
+                <td><strong>A2: Symmetric MSE Only</strong></td>
+                <td>Yes</td>
+                <td>No</td>
+                <td>No</td>
+                <td>Yes</td>
+                <td>Gradient Refine</td>
+                <td>76.2%</td>
+                <td>24.0%</td>
+              </tr>
+              <tr>
+                <td><strong>A3: Single-Scale Micro</strong></td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>No (K=1)</td>
+                <td>Gradient Refine</td>
+                <td>84.1%</td>
+                <td>42.5%</td>
+              </tr>
+              <tr class="highlight-row">
+                <td><strong>A4: Full Agentic-LWM</strong></td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>Yes (K=4)</td>
+                <td>Gradient Refine</td>
+                <td><strong>92.4%</strong></td>
+                <td><strong>68.5%</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="teaser-caption" style="margin-top: -1rem;">
+          Table 2: Ablation analysis isolating continuous gradient refinement, spatial-contact decoupling, phase regularization, and hierarchical macro conditioning.
+        </p>
+      </section>
+
+      <!-- BibTeX Citation Block -->
+      <section class="content-block" id="bibtex">
+        <h2 class="section-title">BibTeX Citation</h2>
+        <div class="bibtex-wrapper">
+          <button class="copy-bibtex-btn" aria-label="Copy BibTeX citation">
+            <i class="fas fa-copy"></i>
+            <span class="copy-text">Copy</span>
+          </button>
+          <pre id="bibtex-code">@inproceedings{sarowar2027agenticlwm,
+  title     = {Agentic-WM: Grounding Multimodal Policies in Hierarchical Latent World Model},
+  author    = {Sarowar, Md Selim and Kim, Sungho},
+  booktitle = {Robotics: Science and Systems (RSS)},
+  year      = {2027},
+  url       = {https://physical-super-intelligence.github.io/Agentic-LWM/}
+}</pre>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container is-max-widescreen">
+      <p>
+        <strong>Agentic-LWM</strong> &middot; <a href="https://s-elim.github.io" target="_blank" rel="noopener">Advanced Visual Intelligence Lab (AVI)</a>, Yeungnam University.
+      </p>
+      <p style="margin-top: 0.5rem; font-size: 0.85rem;">
+        Research code and model checkpoints available at <a href="https://github.com/Physical-Super-Intelligence/Agentic-LWM" target="_blank" rel="noopener">GitHub</a>.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
