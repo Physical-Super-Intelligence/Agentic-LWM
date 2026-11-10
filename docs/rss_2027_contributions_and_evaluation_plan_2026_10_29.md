@@ -1,4 +1,4 @@
-# Agentic-WM: Grounding Multimodal Policies in Hierarchical Latent World Model (RSS 2027 Plan)
+# Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model (RSS 2027 Plan)
 
 **Date:** 2026-10-29  
 **Target Venue:** RSS 2027 (CORE A*)  

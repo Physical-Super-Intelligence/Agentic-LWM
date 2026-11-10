@@ -166,7 +166,7 @@ If you find this work or codebase useful in your research, please cite:
 
 ```bibtex
 @inproceedings{sarowar2027agenticlwm,
-  title     = {Agentic-WM: Grounding Multimodal Policies in Hierarchical Latent World Model},
+  title     = {Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model},
   author    = {Sarowar, Md Selim and Kim, Sungho},
   booktitle = {Robotics: Science and Systems (RSS)},
   year      = {2027},
