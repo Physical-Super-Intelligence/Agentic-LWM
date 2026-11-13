@@ -4,12 +4,12 @@ Project page: <https://physical-super-intelligence.github.io/Agentic-LWM/> (in p
 
 ![Agentic-LWM overview](static/images/framework.jpg)
 
-Agentic-LWM is a dual-system framework in which a code-as-policy agent queries an action-conditioned hierarchical
-joint-embedding predictive architecture (A-HJEPA) as a physics prior. A-HJEPA factorises its latent into a spatial
-track and a contact track made orthogonal to it by projection, predicts contact causally from the predicted spatial
-state, and is trained with a latent prediction loss plus a phase-margin loss whose failure anchors are mined from
-proprioception alone. Before actuation it certifies the agent's trajectory by the predicted stability of the contact
-track and, if certification fails, refines the trajectory by gradient descent on a latent energy.
+Agentic-LWM is a dual-system framework in which an Agentic Policy (Gemini writing robot code) queries an
+action-conditioned hierarchical joint-embedding predictive architecture (A-HJEPA) as a physics prior. A frozen V-JEPA 2
+encoder turns the agentview and wrist cameras, proprioception and force into scene and contact tokens; A-HJEPA rolls them
+forward at a 5 Hz micro step and a stride-4 macro step under end-effector delta actions. Before actuation a failure head
+on the predicted contact tokens certifies each action chunk; otherwise sample-and-select keeps the via-point path with the
+lowest failure score toward the same goal.
 
 ## Status
 

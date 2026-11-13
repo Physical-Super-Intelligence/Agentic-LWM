@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model</title>
-  <meta name="description" content="Agentic-LWM: a code-as-policy agent queries an action-conditioned hierarchical JEPA (A-HJEPA) as a physics prior, certifying and refining each motion in a factorised spatial and contact latent before it acts.">
+  <meta name="description" content="Agentic-LWM: an Agentic Policy queries an action-conditioned hierarchical JEPA (A-HJEPA) as a physics prior; a failure head on the predicted contact tokens certifies each motion before it acts.">
   <meta name="theme-color" content="#0e7490">
   <link rel="canonical" href="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model">
-  <meta property="og:description" content="Contact needs its own subspace: a code-as-policy agent that certifies and refines each motion in a latent world model before it acts.">
+  <meta property="og:description" content="An Agentic Policy grounded in a latent world model: each motion is certified for collisions and drops before it acts.">
   <meta property="og:url" content="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:image" content="https://physical-super-intelligence.github.io/Agentic-LWM/static/images/framework.jpg">
   <meta name="twitter:card" content="summary_large_image">
@@ -70,12 +70,13 @@
 
       <figure class="fig" style="margin-top:2.4rem">
         <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1111"
-             alt="Agentic-LWM overview: dual-stream encoding, spatial and contact tracks, the bi-level A-HJEPA world model, latent energy descent and verified recovery">
-        <figcaption><b>Agentic-LWM overview.</b> A frozen vision-language model grounds the instruction into 3D subgoals and skills,
-          and a multi-view encoder with a wrist-proprioceptive contact gate feeds the world model. The latent is factorised into
-          a spatial track and a contact track. The bi-level A-HJEPA predicts macro dynamics at stride K=4 and micro dynamics one
-          recorded step (5&nbsp;Hz) ahead from RGB and proprioception (force input disabled). The agent refines its action chunk
-          by descending a latent energy before execution, and grasp verification from proprioception triggers recovery.</figcaption>
+             alt="Agentic-LWM overview: the Agentic Policy, a frozen V-JEPA 2 encoder, scene and contact tokens, the bi-level A-HJEPA world model, the failure certificate with sample-and-select, and verified recovery">
+        <figcaption><b>Agentic-LWM overview.</b> The Agentic Policy (Gemini) writes code that proposes an action chunk and a joint
+          goal. A frozen V-JEPA&nbsp;2 encoder turns agentview, wrist, proprioception and force into scene and contact tokens, and
+          the learned bi-level A-HJEPA predicts them at a 5&nbsp;Hz micro step and a stride-4 macro step under end-effector delta
+          actions. A failure head on the predicted contact tokens certifies the chunk; otherwise sample-and-select keeps the
+          via-point path with the lowest failure score toward the same goal. A failure triggers recovery: interception, retreat,
+          re-observation and residual re-synthesis.</figcaption>
       </figure>
     </div>
   </header>
@@ -83,12 +84,15 @@
   <!-- Problem -->
   <section class="band alt" id="problem">
     <div class="wrap">
-      <div class="head"><span class="kicker k1">Problem</span><h2>Code-as-policy agents act open loop</h2></div>
+      <div class="head"><span class="kicker k1">Problem</span><h2>Agentic Policies act open loop</h2></div>
       <p class="pull">A handle mislocated by a few millimetres, a rim clipped during extraction or a grasp that slips leaves no trace
         in the agent's state. In a pilot on LIBERO-Spatial with such an agent and no world model (29 episodes), task completion
         was <b>0.448</b>, and the two contact-rich extraction tasks had <b>no successes</b>.</p>
-      <p class="pull" style="margin-bottom:0">Our insight: contact needs <b>its own subspace</b>, its own asymmetric penalty around
+      <p class="pull">Our insight: contact needs <b>its own subspace</b>, its own asymmetric penalty around
         irreversible failure, and a differentiable energy the agent can descend <b>before it actuates</b>.</p>
+      <p class="pull" style="margin-bottom:0"><b>Central question.</b> Under object-position and task shifts that break end-to-end
+        VLAs, does an Agentic Policy grounded in a latent world model keep its success, and does the model's verification
+        stay reliable?</p>
     </div>
   </section>
 
@@ -97,21 +101,21 @@
     <div class="wrap">
       <div class="head"><span class="kicker k2">Method</span><h2>The agent proposes; A-HJEPA predicts, scores and refines</h2></div>
       <div class="ideas">
-        <div class="idea"><span class="n">01</span><h3>Dual-stream encoder with a contact gate</h3>
-          <p>A shared vision backbone embeds the agentview and wrist cameras, and a small network embeds proprioception;
-            a wrist-proprioceptive contact gate scales the visual features by a gate computed from proprioception.</p></div>
-        <div class="idea"><span class="n">02</span><h3>Spatial / contact factorisation</h3>
-          <p>The latent splits into a spatial track (object and arm SE(3) state) and a contact track made orthogonal to it by
-            projection, so the contact track cannot become a second copy of the scene.</p></div>
+        <div class="idea"><span class="n">01</span><h3>Agentic Policy</h3>
+          <p>Gemini writes the robot program with perception and motion tools (SAM3, GraspNet, IK), merges three candidate
+            programs into one, and re-generates over several turns. It proposes each action chunk and its joint goal.</p></div>
+        <div class="idea"><span class="n">02</span><h3>Scene and contact tokens</h3>
+          <p>A frozen V-JEPA&nbsp;2 encoder turns the agentview and wrist cameras into tokens, joined by proprioception and
+            force. Scene tokens carry objects, layout and arm; contact tokens carry wrist, proprioception and force.</p></div>
         <div class="idea"><span class="n">03</span><h3>Bi-level A-HJEPA</h3>
-          <p>A macro track predicts one stride of K=4 steps ahead; a micro track predicts one recorded step ahead and predicts
-            contact causally from the predicted spatial state.</p></div>
-        <div class="idea"><span class="n">04</span><h3>Latent energy, refinement and verified recovery</h3>
-          <p>Before actuation, A-HJEPA certifies the agent's trajectory by the predicted stability of the contact track and, if
-            certification fails, refines it by gradient descent on a latent energy. A grasp check from proprioception triggers
-            recovery: interception, safe retreat, re-observation and re-synthesis.</p></div>
+          <p>A block-causal predictor rolls the tokens forward at a 5&nbsp;Hz micro step and a stride-4 macro step under
+            end-effector delta actions, and predicts contact from the stop-gradient predicted scene.</p></div>
+        <div class="idea"><span class="n">04</span><h3>Failure certificate, sample-and-select, recovery</h3>
+          <p>A failure head on the predicted contact tokens scores the chance of a collision or a drop. A chunk under the
+            threshold runs; otherwise 16 via-point paths to the same goal are scored in one rollout and the lowest is kept.
+            A failure triggers recovery: interception, retreat, re-observation and re-synthesis.</p></div>
       </div>
-      <p class="note">Training uses a latent prediction loss plus a phase-margin loss whose failure anchors are mined from proprioception alone.</p>
+      <p class="note">The failure head is supervised and calibrated on training cells only; proprioceptive failure anchors are kept as an ablation.</p>
     </div>
   </section>
 
@@ -119,36 +123,39 @@
   <section class="band alt" id="plan">
     <div class="wrap">
       <div class="head"><span class="kicker k3">Evaluation plan</span><h2>A protocol built to attribute every gain</h2></div>
-      <p class="pull">LIBERO-PRO from perception only: the Object, Goal, Spatial and LIBERO-10 suites under the Pos and Task
-        perturbations. Language-model proposals are cached and replayed, each ablation adds exactly one component, and failures
-        are counted from simulator contact labels that neither the agent nor the world model ever sees.</p>
+      <p class="pull">LIBERO-PRO from perception only: the Object, Goal and Spatial suites under the Pos and Task perturbations,
+        six cells. Language-model proposals are cached and replayed, each ablation changes one component, and test failures
+        are counted from simulator contact labels that neither the agent nor the world model sees.</p>
       <figure class="fig fig-narrow" style="margin-top:0">
         <img src="static/images/sim_frameworks.jpg" class="zoom" loading="lazy" width="1276" height="848"
              alt="Simulation frameworks: LIBERO-PRO Franka scenes and Meta-World MT50 Sawyer scenes">
         <figcaption><b>Simulation frameworks.</b> Top: LIBERO-PRO (Franka), Pos and Task perturbations. Bottom: Meta-World MT50 (Sawyer),
-          a preliminary transfer study.</figcaption>
+          preliminary transfer.</figcaption>
       </figure>
 
-      <h3 class="sub" style="margin-top:2.2rem">Ablation ladder <small>each row adds one component</small></h3>
+      <h3 class="sub" style="margin-top:2.2rem">Ablation ladder <small>each row changes one component</small></h3>
       <div class="table-wrap">
         <table class="tbl">
           <thead><tr><th>Row</th><th style="text-align:left">Variant</th></tr></thead>
           <tbody>
-            <tr><th>A0</th><td style="text-align:left">A3 model, certify and raise only</td></tr>
-            <tr><th>A1</th><td style="text-align:left">Monolithic latent with refinement, equal capacity, trained end-to-end</td></tr>
-            <tr><th>A2</th><td style="text-align:left">+ spatial/contact factorisation (orthogonality loss, no phase margin)</td></tr>
-            <tr class="ours"><th>A3</th><td style="text-align:left">+ phase-margin loss (full system)</td></tr>
+            <tr><th></th><td style="text-align:left">No world model (the Agentic Policy alone)</td></tr>
+            <tr><th>A0</th><td style="text-align:left">A2, certify and raise only</td></tr>
+            <tr><th>A1</th><td style="text-align:left">Monolithic latent with refinement, equal capacity</td></tr>
+            <tr class="ours"><th>A2</th><td style="text-align:left">+ scene/contact factorisation (full system)</td></tr>
+            <tr><th>A3</th><td style="text-align:left">+ proprioceptive failure anchors and phase margin (ablation)</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="hyp">
-        <div class="idea"><span class="n">H1 &middot; RQ1</span><h3>Factorisation helps contact</h3>
-          <p>On the contact-rich subset, A2 completes more episodes than A1, and its contact track probes contact better.</p></div>
-        <div class="idea"><span class="n">H2 &middot; RQ2</span><h3>The margin prevents failures</h3>
-          <p>A3 produces fewer drops and collisions per episode than A2 on LIBERO-PRO Spatial and Object (Pos).</p></div>
-        <div class="idea"><span class="n">H3 &middot; RQ3</span><h3>Refinement beats raising</h3>
-          <p>At an equal cap on language-model calls, A3 completes more episodes than A0 over the eight cells.</p></div>
+        <div class="idea"><span class="n">H1 &middot; RQ1</span><h3>Verification holds under shift</h3>
+          <p>On shifted cells, A2's failure score ranks chunks that end in a simulator-counted failure above the rest better
+            than the stronger of a proprioception-only and an action-only control.</p></div>
+        <div class="idea"><span class="n">H2 &middot; RQ2</span><h3>The contact subspace helps</h3>
+          <p>On the same cells, A2's failure AUROC exceeds the monolithic A1's, and its contact track probes contact better.</p></div>
+        <div class="idea"><span class="n">H3 &middot; RQ3</span><h3>Fewer failures in closed loop</h3>
+          <p>With paired replay at an equal cap on language-model calls, A2 has fewer simulator-counted failures per episode
+            than the agent without a world model, with no lower completion.</p></div>
       </div>
       <p class="note">Each hypothesis is falsified if the 95% bootstrap interval of its difference contains zero. Results will be added
         once the runs are complete.</p>
