@@ -69,13 +69,13 @@
       </div>
 
       <figure class="fig" style="margin-top:2.4rem">
-        <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1111"
-             alt="Agentic-LWM overview: the Agentic Policy writes a program, the Dream API runs it in the hierarchical world model one macro step per API call, a scene readout gives the imagined trace with a predicted failure, the agent repairs the program, and the robot executes it once with recovery as fallback">
+        <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1112"
+             alt="Agentic-LWM overview: the Agentic Policy writes a program, the Dream API runs it in the code-conditioned world model where each API call conditions one macro step and micro motor steps refine only the contact calls, a scene readout gives the imagined trace with a predicted failure, the agent repairs the program, and the robot executes it once with recovery as fallback">
         <figcaption><b>Agentic-LWM: rehearsal in imagination.</b> The Agentic Policy writes a program from the instruction and
-          the real observation. The Dream API runs it unchanged in the hierarchical world model, one macro step per API call over
-          micro motor steps on frozen V-JEPA&nbsp;2 tokens, and a scene readout after each call yields the imagined trace. A
-          predicted failure sends the trace back to the agent for repair; the repaired program is executed once, with recovery
-          as fallback.</figcaption>
+          the real observation. The Dream API runs it unchanged in the code-conditioned world model: each API call conditions
+          one macro step in the latent space of frozen V-JEPA&nbsp;2 tokens, micro motor steps refine only the contact calls,
+          and a scene readout after each call yields the imagined trace. A predicted failure sends the trace back to the agent
+          for repair; the repaired program is executed once, with recovery as fallback.</figcaption>
       </figure>
     </div>
   </header>
@@ -85,14 +85,14 @@
     <div class="wrap">
       <div class="head"><span class="kicker k1">Problem</span><h2>A robot learns whether its plan works only by running it</h2></div>
       <p class="pull">Vision-language-action models fine-tuned on LIBERO demonstrations reproduce what they memorized and
-        <b>collapse</b> under the position and task perturbations of LIBERO-PRO. Zero-shot coding agents such as CaP-Agent0
-        perceive each new scene and write a program for it, yet they too learn about a plan only from execution: run, look,
-        regenerate. On a robot every such retry can cost a dropped object or a human intervention.</p>
+        <b>collapse</b> under the position and task perturbations of LIBERO-PRO. Coding agents perceive each new scene and
+        write a program for it, yet they too learn about a plan only from execution: run, look, regenerate. On a robot every such retry can cost a dropped object or a human intervention.</p>
       <p class="pull"><b>Central question.</b> Can a robot coding agent find out whether its program will work before it runs
         it, by rehearsing it in a world model learned only from demonstrations?</p>
       <p class="pull" style="margin-bottom:0">From <b>trial-and-error execution</b> to <b>rehearsal in imagination</b>. The
-        core innovation is a world model that executes the agent's own code: its high level advances one step per API call the
-        agent writes and returns a predicted execution trace that the agent reads and repairs against.</p>
+        core innovation is a world model that executes the agent's own code: its high level is conditioned on the code,
+        predicting the latent state after each API call from the call's function name and arguments, and it returns a
+        predicted execution trace that the agent reads and repairs against.</p>
     </div>
   </section>
 
@@ -100,24 +100,28 @@
   <section class="band" id="method">
     <div class="wrap">
       <div class="head"><span class="kicker k2">Method</span><h2>Imagine, repair, then act once</h2></div>
-      <p class="note" style="margin:0 0 1.2rem">The Agentic Policy is our port of CaP-Agent0: a frozen Gemini model writes
-        Python against the CaP-X LIBERO API, with execution fixes (retreat after a failed turn, a grasp check in meters,
-        re-observation and re-synthesis). A frozen V-JEPA&nbsp;2 ViT-L encoder turns the agentview and wrist cameras into
-        tokens, joined by proprioception and force, and a block-causal, action-conditioned predictor rolls them forward at
-        5&nbsp;Hz under end-effector delta actions. The four parts below are the Stage 1 design built on these.</p>
+      <p class="note" style="margin:0 0 1.2rem">The Agentic Policy is a frozen vision-language model (Gemini) that writes
+        Python against a perception and motion API, with retreat after a failed turn, a grasp check in meters, re-observation
+        and re-synthesis; our agent builds on an <a href="https://proceedings.mlr.press/v306/fu26u.html">open-source coding-agent
+        framework</a>. A frozen V-JEPA&nbsp;2 ViT-L encoder turns the agentview and wrist cameras into tokens, joined by
+        proprioception and force, and a block-causal, action-conditioned predictor rolls them forward at 5&nbsp;Hz under
+        end-effector delta actions. The four parts below are the Stage 1 design built on these; the planner stays frozen and
+        outside the world model.</p>
       <div class="ideas">
-        <div class="idea"><span class="n">01</span><h3>Program-level world model</h3>
-          <p>The macro level of the hierarchical world model steps once per API call instead of at a fixed stride. Each motion
-            call becomes one macro action from its commanded target, and the micro level fills in the motor steps of the call.
-            Training pairs come from demonstrations cut into primitive segments at gripper events and end-effector stops,
-            each mapped to the API primitive that produces it.</p></div>
+        <div class="idea"><span class="n">01</span><h3>Code-conditioned world model</h3>
+          <p>Each macro step predicts the latent state after one API call from the current latent and an embedding of the
+            call itself: a learned token for the function name, the object it acts on through a frozen text encoder, and its
+            numeric arguments as values. The micro level stays on the compiled motor actions at 5&nbsp;Hz and refines only the
+            contact calls (<code>close_gripper</code>, <code>open_gripper</code>, pushes). Call labels come free from the
+            demonstrations: replays are cut at gripper events and end-effector stops and labelled by rules on the stored
+            simulator state, with no language-model labels.</p></div>
         <div class="idea"><span class="n">02</span><h3>Scene readout</h3>
           <p>A small head reads every predicted state: object positions, the object in hand, finger and arm contacts, and
             which goal conditions hold. It is supervised by the simulator state stored in the demonstration replays (object
             poses, evaluator contacts, LIBERO's success check) and by the task's goal predicates.</p></div>
         <div class="idea"><span class="n">03</span><h3>Dream API</h3>
           <p>An imagined backend with the same function signatures, so the agent's program runs unchanged. Perception before
-            any motion uses the real observation; each motion call advances the world model one macro step; grasp checks and
+            any motion uses the real observation; each motion or gripper call conditions one macro step; grasp checks and
             later perception calls answer from the readout. The world model is latent and decodes no pixels.</p></div>
         <div class="idea"><span class="n">04</span><h3>Imagine, Repair, Act</h3>
           <p>The agent rehearses its program, reads the predicted trace (per call: readout and a predicted failure event with
@@ -127,7 +131,7 @@
       <p class="note">Trained only on LIBERO demonstrations, replayed through the agent's own move primitive with perturbations
         that supply failures; never on agent episodes. Limitations we test rather than assume: error compounds over long
         programs, and an offline test of an action-level version found that predicted futures did not beat current-frame
-        features on shifted replays, which is why program-level stepping and the readout are the Stage 1 changes.</p>
+        features on shifted replays, which is why code conditioning and the readout are the Stage 1 changes.</p>
     </div>
   </section>
 
@@ -150,12 +154,12 @@
         <table class="tbl">
           <thead><tr><th>Row</th><th style="text-align:left">Rehearsal</th><th style="text-align:left">Agent reads</th></tr></thead>
           <tbody>
-            <tr><th>R0</th><td style="text-align:left">None (CaP-Agent0 port with execution fixes)</td><td style="text-align:left">n/a</td></tr>
+            <tr><th>R0</th><td style="text-align:left">None (our Agentic Policy without rehearsal)</td><td style="text-align:left">n/a</td></tr>
             <tr><th>R1</th><td style="text-align:left">Simulator rehearsal, privileged upper bound</td><td style="text-align:left">full trace</td></tr>
             <tr><th>R2</th><td style="text-align:left">World model, action-level rollout</td><td style="text-align:left">full trace</td></tr>
-            <tr><th>R3</th><td style="text-align:left">World model, program-level</td><td style="text-align:left">success flag</td></tr>
-            <tr><th>R4</th><td style="text-align:left">World model, program-level</td><td style="text-align:left">failure event and its call</td></tr>
-            <tr class="ours"><th>R5</th><td style="text-align:left">Agentic-LWM: world model, program-level</td><td style="text-align:left">full trace</td></tr>
+            <tr><th>R3</th><td style="text-align:left">World model, code-conditioned</td><td style="text-align:left">success flag</td></tr>
+            <tr><th>R4</th><td style="text-align:left">World model, code-conditioned</td><td style="text-align:left">failure event and its call</td></tr>
+            <tr class="ours"><th>R5</th><td style="text-align:left">Agentic-LWM: world model, code-conditioned</td><td style="text-align:left">full trace</td></tr>
           </tbody>
         </table>
       </div>
@@ -167,8 +171,9 @@
         <div class="idea"><span class="n">Q1 &middot; H1</span><h3>Does rehearsal make the first execution more reliable under shift?</h3>
           <p>R5 completes more episodes at first execution than R0. Refuted if the paired interval of the difference
             contains zero. R1 separates the value of rehearsal from world-model fidelity.</p></div>
-        <div class="idea"><span class="n">Q2 &middot; H2</span><h3>Do program calls rehearse better than motor actions?</h3>
-          <p>On the same programs, R5 beats R2 in first-execution completion and in per-call trace agreement, and the gap
+        <div class="idea"><span class="n">Q2 &middot; H2</span><h3>Does a world model conditioned on the agent's calls rehearse better than one on motor actions?</h3>
+          <p>On the same programs, code-conditioned rehearsal (R5) beats action-level rehearsal (R2) in first-execution
+            completion and in per-call trace agreement, and the gap
             grows with program length. Refuted if either difference or the growth contains zero.</p></div>
         <div class="idea"><span class="n">Q3 &middot; H3</span><h3>What must the agent see to fix its code?</h3>
           <p>At an equal cap on Gemini calls, first-execution completion rises from R3 (flag) to R4 (event and call index)

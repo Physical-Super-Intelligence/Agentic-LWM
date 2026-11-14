@@ -8,13 +8,17 @@ A robot coding agent learns whether its program works only by running it. Agenti
 out before it acts, by rehearsing its program in a world model learned only from demonstrations: from trial-and-error
 execution to rehearsal in imagination.
 
-The core is a world model that executes the agent's own code. The Agentic Policy (a frozen Gemini model, our port of
-CaP-Agent0) writes a program against the CaP-X LIBERO API. Through a Dream API the unchanged program runs in a
-hierarchical world model over frozen V-JEPA 2 tokens, whose high level advances one step per API call; a scene readout
+The core is a world model that executes the agent's own code. The Agentic Policy (a frozen Gemini model) writes a
+program against a perception and motion API; the agent builds on an
+[open-source coding-agent framework](https://proceedings.mlr.press/v306/fu26u.html). Through a Dream API the unchanged
+program runs in a hierarchical world model over frozen V-JEPA 2 tokens whose high level is conditioned on the code: each
+macro step predicts the latent state after one API call from the call's function name and arguments. A scene readout
 after each call gives object positions, the object in hand, contacts and goal conditions. The agent reads the imagined
 trace, repairs the program and executes it once for real, with its recovery loop as the fallback.
 
-- **Program-level world model**: macro step per API call, micro level at 5 Hz under end-effector delta actions.
+- **Code-conditioned world model**: one macro step per API call, embedded from a learned primitive token, the object
+  through a frozen text encoder and the numeric arguments; the micro level at 5 Hz on the compiled motor actions refines
+  only the contact calls; call labels come from demonstration replays by rules on stored simulator state.
 - **Scene readout**: supervised by simulator state stored in LIBERO demonstration replays and by goal predicates.
 - **Dream API**: same function signatures as the real API; perception after a motion answers from the readout.
 - **Imagine, Repair, Act**: rehearse within a fixed budget, execute once, count every real retry.
