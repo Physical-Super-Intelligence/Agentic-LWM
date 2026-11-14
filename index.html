@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model</title>
-  <meta name="description" content="Agentic-LWM: an Agentic Policy queries an action-conditioned hierarchical world model as a physics prior; a failure head on the predicted contact tokens certifies each motion before it acts.">
+  <meta name="description" content="Agentic-LWM: a robot coding agent rehearses its program in a world model learned only from demonstrations, reads the imagined trace, repairs the program and executes it once.">
   <meta name="theme-color" content="#0e7490">
   <link rel="canonical" href="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:type" content="article">
   <meta property="og:title" content="Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model">
-  <meta property="og:description" content="An Agentic Policy grounded in a latent world model: each motion is certified for collisions and drops before it acts.">
+  <meta property="og:description" content="From trial-and-error execution to rehearsal in imagination: a world model that executes the agent's own code.">
   <meta property="og:url" content="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:image" content="https://physical-super-intelligence.github.io/Agentic-LWM/static/images/framework.jpg">
   <meta name="twitter:card" content="summary_large_image">
@@ -70,13 +70,12 @@
 
       <figure class="fig" style="margin-top:2.4rem">
         <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1111"
-             alt="Agentic-LWM overview: the Agentic Policy, a frozen V-JEPA 2 encoder, scene and contact tokens, the hierarchical world model, the failure certificate with sample-and-select, and verified recovery">
-        <figcaption><b>Agentic-LWM overview.</b> The Agentic Policy (Gemini) writes code that proposes an action chunk and a joint
-          goal. A frozen V-JEPA&nbsp;2 encoder turns agentview, wrist, proprioception and force into scene and contact tokens, and
-          the learned hierarchical world model predicts them at a 5&nbsp;Hz micro step and a stride-4 macro step under end-effector delta
-          actions. A failure head on the predicted contact tokens certifies the chunk; otherwise sample-and-select keeps the
-          via-point path with the lowest failure score toward the same goal. A failure triggers recovery: interception, retreat,
-          re-observation and residual re-synthesis.</figcaption>
+             alt="Agentic-LWM overview: the Agentic Policy writes a program, the Dream API runs it in the hierarchical world model one macro step per API call, a scene readout gives the imagined trace with a predicted failure, the agent repairs the program, and the robot executes it once with recovery as fallback">
+        <figcaption><b>Agentic-LWM: rehearsal in imagination.</b> The Agentic Policy writes a program from the instruction and
+          the real observation. The Dream API runs it unchanged in the hierarchical world model, one macro step per API call over
+          micro motor steps on frozen V-JEPA&nbsp;2 tokens, and a scene readout after each call yields the imagined trace. A
+          predicted failure sends the trace back to the agent for repair; the repaired program is executed once, with recovery
+          as fallback.</figcaption>
       </figure>
     </div>
   </header>
@@ -84,50 +83,61 @@
   <!-- Problem -->
   <section class="band alt" id="problem">
     <div class="wrap">
-      <div class="head"><span class="kicker k1">Problem</span><h2>Agentic Policies act open loop</h2></div>
-      <p class="pull">A handle mislocated by a few millimetres, a rim clipped during extraction or a grasp that slips leaves no trace
-        in the agent's state. In a pilot on LIBERO-Spatial with such an agent and no world model (29 episodes), task completion
-        was <b>0.448</b>, and the two contact-rich extraction tasks had <b>no successes</b>.</p>
-      <p class="pull">Our insight: the quantity that decides success, the <b>state of contact</b> between gripper and scene,
-        should be predicted as its own stream, read out as a <b>failure probability</b>, and offered to the agent as a choice
-        among motions <b>before it actuates</b>.</p>
-      <p class="pull" style="margin-bottom:0"><b>Central question.</b> Under object-position and task shifts that break end-to-end
-        VLAs, does an Agentic Policy grounded in a latent world model keep its success?</p>
+      <div class="head"><span class="kicker k1">Problem</span><h2>A robot learns whether its plan works only by running it</h2></div>
+      <p class="pull">Vision-language-action models fine-tuned on LIBERO demonstrations reproduce what they memorized and
+        <b>collapse</b> under the position and task perturbations of LIBERO-PRO. Zero-shot coding agents such as CaP-Agent0
+        perceive each new scene and write a program for it, yet they too learn about a plan only from execution: run, look,
+        regenerate. On a robot every such retry can cost a dropped object or a human intervention.</p>
+      <p class="pull"><b>Central question.</b> Can a robot coding agent find out whether its program will work before it runs
+        it, by rehearsing it in a world model learned only from demonstrations?</p>
+      <p class="pull" style="margin-bottom:0">From <b>trial-and-error execution</b> to <b>rehearsal in imagination</b>. The
+        core innovation is a world model that executes the agent's own code: its high level advances one step per API call the
+        agent writes and returns a predicted execution trace that the agent reads and repairs against.</p>
     </div>
   </section>
 
   <!-- Method -->
   <section class="band" id="method">
     <div class="wrap">
-      <div class="head"><span class="kicker k2">Method</span><h2>The agent proposes; the world model predicts, scores and selects</h2></div>
+      <div class="head"><span class="kicker k2">Method</span><h2>Imagine, repair, then act once</h2></div>
+      <p class="note" style="margin:0 0 1.2rem">The Agentic Policy is our port of CaP-Agent0: a frozen Gemini model writes
+        Python against the CaP-X LIBERO API, with execution fixes (retreat after a failed turn, a grasp check in meters,
+        re-observation and re-synthesis). A frozen V-JEPA&nbsp;2 ViT-L encoder turns the agentview and wrist cameras into
+        tokens, joined by proprioception and force, and a block-causal, action-conditioned predictor rolls them forward at
+        5&nbsp;Hz under end-effector delta actions. The four parts below are the Stage 1 design built on these.</p>
       <div class="ideas">
-        <div class="idea"><span class="n">01</span><h3>Agentic Policy</h3>
-          <p>Gemini writes the robot program with perception and motion tools (SAM3, GraspNet, IK), merges three candidate
-            programs into one, and re-generates over several turns. It proposes each action chunk and its joint goal.</p></div>
-        <div class="idea"><span class="n">02</span><h3>Scene and contact tokens</h3>
-          <p>A frozen V-JEPA&nbsp;2 encoder turns the agentview and wrist cameras into tokens, joined by proprioception and
-            force. Scene tokens carry objects, layout and arm; contact tokens carry wrist, proprioception and force.</p></div>
-        <div class="idea"><span class="n">03</span><h3>Hierarchical world model</h3>
-          <p>A block-causal predictor rolls the tokens forward at a 5&nbsp;Hz micro step and a stride-4 macro step under
-            end-effector delta actions, and predicts contact from the stop-gradient predicted scene.</p></div>
-        <div class="idea"><span class="n">04</span><h3>Failure certificate, sample-and-select, recovery</h3>
-          <p>A failure head on the predicted contact tokens scores the chance of a collision or a drop. A chunk under the
-            threshold runs; otherwise 16 via-point paths to the same goal are scored in one rollout and the lowest is kept.
-            A failure triggers recovery: interception, retreat, re-observation and re-synthesis.</p></div>
+        <div class="idea"><span class="n">01</span><h3>Program-level world model</h3>
+          <p>The macro level of the hierarchical world model steps once per API call instead of at a fixed stride. Each motion
+            call becomes one macro action from its commanded target, and the micro level fills in the motor steps of the call.
+            Training pairs come from demonstrations cut into primitive segments at gripper events and end-effector stops,
+            each mapped to the API primitive that produces it.</p></div>
+        <div class="idea"><span class="n">02</span><h3>Scene readout</h3>
+          <p>A small head reads every predicted state: object positions, the object in hand, finger and arm contacts, and
+            which goal conditions hold. It is supervised by the simulator state stored in the demonstration replays (object
+            poses, evaluator contacts, LIBERO's success check) and by the task's goal predicates.</p></div>
+        <div class="idea"><span class="n">03</span><h3>Dream API</h3>
+          <p>An imagined backend with the same function signatures, so the agent's program runs unchanged. Perception before
+            any motion uses the real observation; each motion call advances the world model one macro step; grasp checks and
+            later perception calls answer from the readout. The world model is latent and decodes no pixels.</p></div>
+        <div class="idea"><span class="n">04</span><h3>Imagine, Repair, Act</h3>
+          <p>The agent rehearses its program, reads the predicted trace (per call: readout and a predicted failure event with
+            its call index), edits the program and rehearses again within a fixed budget, then executes once for real. The
+            recovery loop stays as the fallback after a real failure, and every real retry is counted.</p></div>
       </div>
-      <p class="note">The world model and failure head train only on LIBERO demonstration replays, and the threshold is set on
-        validation motion calls. Gradient refinement in place of sample-and-select is kept as an ablation.</p>
+      <p class="note">Trained only on LIBERO demonstrations, replayed through the agent's own move primitive with perturbations
+        that supply failures; never on agent episodes. Limitations we test rather than assume: error compounds over long
+        programs, and an offline test of an action-level version found that predicted futures did not beat current-frame
+        features on shifted replays, which is why program-level stepping and the readout are the Stage 1 changes.</p>
     </div>
   </section>
 
   <!-- Evaluation plan -->
   <section class="band alt" id="plan">
     <div class="wrap">
-      <div class="head"><span class="kicker k3">Evaluation plan</span><h2>A protocol built to attribute every gain</h2></div>
-      <p class="pull">LIBERO-PRO from perception only: the Object, Goal and Spatial suites under the Pos and Task perturbations,
-        six cells. Language-model proposals are cached and replayed, each ablation changes one component, and test failures
-        are counted from simulator contact labels that neither the agent nor the world model sees. Stage 2 extends the same
-        protocol to LIBERO-MAX, with events that change the scene during execution, and to Meta-World MT50.</p>
+      <div class="head"><span class="kicker k3">Evaluation plan</span><h2>A pre-registered test of rehearsal</h2></div>
+      <p class="pull">LIBERO-PRO in simulation: the Object, Goal and Spatial suites under the Pos and Task perturbations, six
+        cells, at most five episodes per task, paired by task and initial state across rows. The main metric is
+        <b>first-execution completion</b>: the task completed with zero real retries.</p>
       <figure class="fig fig-narrow" style="margin-top:0">
         <img src="static/images/sim_frameworks.jpg" class="zoom" loading="lazy" width="1276" height="848"
              alt="Simulation frameworks: LIBERO-PRO Franka scenes and Meta-World MT50 Sawyer scenes">
@@ -135,35 +145,37 @@
           planned for Stage 2.</figcaption>
       </figure>
 
-      <h3 class="sub" style="margin-top:2.2rem">Ablation ladder <small>each row changes one component</small></h3>
+      <h3 class="sub" style="margin-top:2.2rem">Rows <small>R0 and R5 on all six cells; R1 to R4 on one Pos and one Task cell</small></h3>
       <div class="table-wrap">
         <table class="tbl">
-          <thead><tr><th>Row</th><th style="text-align:left">Variant</th></tr></thead>
+          <thead><tr><th>Row</th><th style="text-align:left">Rehearsal</th><th style="text-align:left">Agent reads</th></tr></thead>
           <tbody>
-            <tr><th></th><td style="text-align:left">No world model (the Agentic Policy alone)</td></tr>
-            <tr><th>C1</th><td style="text-align:left">Gate from proprioception, force and the planned actions, with select (no world model)</td></tr>
-            <tr><th>C2</th><td style="text-align:left">Gate from the frozen V-JEPA&nbsp;2 features at <i>t</i> and the planned actions, with select (no roll-out)</td></tr>
-            <tr><th>A0</th><td style="text-align:left">A2, certify and raise only</td></tr>
-            <tr><th>A1</th><td style="text-align:left">Monolithic predictor with select, equal depth</td></tr>
-            <tr class="ours"><th>A2</th><td style="text-align:left">Dual-track hierarchical world model with select (full system)</td></tr>
-            <tr><th>A3</th><td style="text-align:left">A2 with gradient refinement in place of select</td></tr>
+            <tr><th>R0</th><td style="text-align:left">None (CaP-Agent0 port with execution fixes)</td><td style="text-align:left">n/a</td></tr>
+            <tr><th>R1</th><td style="text-align:left">Simulator rehearsal, privileged upper bound</td><td style="text-align:left">full trace</td></tr>
+            <tr><th>R2</th><td style="text-align:left">World model, action-level rollout</td><td style="text-align:left">full trace</td></tr>
+            <tr><th>R3</th><td style="text-align:left">World model, program-level</td><td style="text-align:left">success flag</td></tr>
+            <tr><th>R4</th><td style="text-align:left">World model, program-level</td><td style="text-align:left">failure event and its call</td></tr>
+            <tr class="ours"><th>R5</th><td style="text-align:left">Agentic-LWM: world model, program-level</td><td style="text-align:left">full trace</td></tr>
           </tbody>
         </table>
       </div>
+      <p class="note">Metrics: first-execution completion, final completion, real retries and Gemini calls per episode,
+        rehearsal latency, and per-call agreement between the predicted and the real readout. The ablation suite is the one
+        with the lowest R0 first-execution completion, fixed after R0 and before any rehearsal run.</p>
 
       <div class="hyp">
-        <div class="idea"><span class="n">H1 &middot; RQ1</span><h3>Robust under shift</h3>
-          <p>With paired replay at an equal cap on language-model calls, A2 completes more episodes than the agent without a
-            world model in the Pos and Task cells of LIBERO-PRO, with fewer failures per episode.</p></div>
-        <div class="idea"><span class="n">H2 &middot; RQ2</span><h3>The gain comes from prediction</h3>
-          <p>A2 exceeds C2, which sees the same actions and candidates without a roll-out, and A1, the monolithic predictor at
-            an equal number of training steps.</p></div>
-        <div class="idea"><span class="n">H3 &middot; RQ3</span><h3>Selection carries the gain, fast</h3>
-          <p>A2 completes more episodes than A0, which certifies and raises without selecting, and matches A3 at a lower gate
-            latency that stays below the agent's own planning time per motion.</p></div>
+        <div class="idea"><span class="n">Q1 &middot; H1</span><h3>Does rehearsal make the first execution more reliable under shift?</h3>
+          <p>R5 completes more episodes at first execution than R0. Refuted if the paired interval of the difference
+            contains zero. R1 separates the value of rehearsal from world-model fidelity.</p></div>
+        <div class="idea"><span class="n">Q2 &middot; H2</span><h3>Do program calls rehearse better than motor actions?</h3>
+          <p>On the same programs, R5 beats R2 in first-execution completion and in per-call trace agreement, and the gap
+            grows with program length. Refuted if either difference or the growth contains zero.</p></div>
+        <div class="idea"><span class="n">Q3 &middot; H3</span><h3>What must the agent see to fix its code?</h3>
+          <p>At an equal cap on Gemini calls, first-execution completion rises from R3 (flag) to R4 (event and call index)
+            to R5 (full trace). Refuted for each step whose paired interval contains zero.</p></div>
       </div>
-      <p class="note">Each hypothesis is falsified if the 95% bootstrap interval of its difference contains zero. Results will be added
-        once the runs are complete.</p>
+      <p class="note">Stage 2 extends the protocol to LIBERO-MAX, whose scenes change during execution, and to Meta-World MT50 on
+        a second embodiment. The page shows no results; results will be added from run reports.</p>
     </div>
   </section>
 

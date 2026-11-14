@@ -4,22 +4,32 @@ Project page: <https://physical-super-intelligence.github.io/Agentic-LWM/> (in p
 
 ![Agentic-LWM overview](static/images/framework.jpg)
 
-Agentic-LWM is a dual-system framework in which an Agentic Policy (Gemini writing robot code) queries an
-action-conditioned hierarchical world model as a physics prior. A frozen V-JEPA 2
-encoder turns the agentview and wrist cameras, proprioception and force into scene and contact tokens; the world model rolls them
-forward at a 5 Hz micro step and a stride-4 macro step under end-effector delta actions. Before actuation a failure head
-on the predicted contact tokens certifies each action chunk; otherwise sample-and-select keeps the via-point path with the
-lowest failure score toward the same goal.
+A robot coding agent learns whether its program works only by running it. Agentic-LWM asks whether the agent can find
+out before it acts, by rehearsing its program in a world model learned only from demonstrations: from trial-and-error
+execution to rehearsal in imagination.
+
+The core is a world model that executes the agent's own code. The Agentic Policy (a frozen Gemini model, our port of
+CaP-Agent0) writes a program against the CaP-X LIBERO API. Through a Dream API the unchanged program runs in a
+hierarchical world model over frozen V-JEPA 2 tokens, whose high level advances one step per API call; a scene readout
+after each call gives object positions, the object in hand, contacts and goal conditions. The agent reads the imagined
+trace, repairs the program and executes it once for real, with its recovery loop as the fallback.
+
+- **Program-level world model**: macro step per API call, micro level at 5 Hz under end-effector delta actions.
+- **Scene readout**: supervised by simulator state stored in LIBERO demonstration replays and by goal predicates.
+- **Dream API**: same function signatures as the real API; perception after a motion answers from the readout.
+- **Imagine, Repair, Act**: rehearse within a fixed budget, execute once, count every real retry.
 
 ## Status
 
-The Stage 1 evaluation (LIBERO-PRO from perception only, Pos and Task perturbations, with the ablation ladder C1, C2 and
-A0 to A3) is in progress; LIBERO-MAX and Meta-World follow in Stage 2. The page reports no results until the runs are complete; every number added later must come from a run report.
+Stage 1 is a pre-registered LIBERO-PRO test (Object, Goal and Spatial suites under the Pos and Task perturbations) with
+first-execution completion as the main metric, rows R0 (no rehearsal) to R5 (Agentic-LWM), a privileged simulator
+rehearsal as upper bound, and questions Q1 to Q3 with hypotheses H1 to H3. LIBERO-MAX and Meta-World follow in Stage 2.
+The page shows no results; results will be added from run reports.
 
 ## Page
 
-Everything on the page follows the paper source: the overview and simulation-framework figures, the method, the
-ablation ladder and hypotheses H1 to H3.
+Everything on the page follows the paper source: the overview and simulation-framework figures, the method, the rows
+of the test and the hypotheses.
 
 ```
 index.html               # the page
