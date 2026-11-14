@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model</title>
-  <meta name="description" content="Agentic-LWM: an Agentic Policy queries an action-conditioned hierarchical JEPA (A-HJEPA) as a physics prior; a failure head on the predicted contact tokens certifies each motion before it acts.">
+  <meta name="description" content="Agentic-LWM: an Agentic Policy queries an action-conditioned hierarchical world model as a physics prior; a failure head on the predicted contact tokens certifies each motion before it acts.">
   <meta name="theme-color" content="#0e7490">
   <link rel="canonical" href="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:type" content="article">
@@ -70,10 +70,10 @@
 
       <figure class="fig" style="margin-top:2.4rem">
         <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1111"
-             alt="Agentic-LWM overview: the Agentic Policy, a frozen V-JEPA 2 encoder, scene and contact tokens, the bi-level A-HJEPA world model, the failure certificate with sample-and-select, and verified recovery">
+             alt="Agentic-LWM overview: the Agentic Policy, a frozen V-JEPA 2 encoder, scene and contact tokens, the hierarchical world model, the failure certificate with sample-and-select, and verified recovery">
         <figcaption><b>Agentic-LWM overview.</b> The Agentic Policy (Gemini) writes code that proposes an action chunk and a joint
           goal. A frozen V-JEPA&nbsp;2 encoder turns agentview, wrist, proprioception and force into scene and contact tokens, and
-          the learned bi-level A-HJEPA predicts them at a 5&nbsp;Hz micro step and a stride-4 macro step under end-effector delta
+          the learned hierarchical world model predicts them at a 5&nbsp;Hz micro step and a stride-4 macro step under end-effector delta
           actions. A failure head on the predicted contact tokens certifies the chunk; otherwise sample-and-select keeps the
           via-point path with the lowest failure score toward the same goal. A failure triggers recovery: interception, retreat,
           re-observation and residual re-synthesis.</figcaption>
@@ -99,7 +99,7 @@
   <!-- Method -->
   <section class="band" id="method">
     <div class="wrap">
-      <div class="head"><span class="kicker k2">Method</span><h2>The agent proposes; A-HJEPA predicts, scores and refines</h2></div>
+      <div class="head"><span class="kicker k2">Method</span><h2>The agent proposes; the world model predicts, scores and selects</h2></div>
       <div class="ideas">
         <div class="idea"><span class="n">01</span><h3>Agentic Policy</h3>
           <p>Gemini writes the robot program with perception and motion tools (SAM3, GraspNet, IK), merges three candidate
@@ -107,7 +107,7 @@
         <div class="idea"><span class="n">02</span><h3>Scene and contact tokens</h3>
           <p>A frozen V-JEPA&nbsp;2 encoder turns the agentview and wrist cameras into tokens, joined by proprioception and
             force. Scene tokens carry objects, layout and arm; contact tokens carry wrist, proprioception and force.</p></div>
-        <div class="idea"><span class="n">03</span><h3>Bi-level A-HJEPA</h3>
+        <div class="idea"><span class="n">03</span><h3>Hierarchical world model</h3>
           <p>A block-causal predictor rolls the tokens forward at a 5&nbsp;Hz micro step and a stride-4 macro step under
             end-effector delta actions, and predicts contact from the stop-gradient predicted scene.</p></div>
         <div class="idea"><span class="n">04</span><h3>Failure certificate, sample-and-select, recovery</h3>
