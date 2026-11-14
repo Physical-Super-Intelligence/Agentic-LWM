@@ -13,8 +13,8 @@ lowest failure score toward the same goal.
 
 ## Status
 
-The evaluation (LIBERO-PRO from perception only, Pos and Task perturbations, with an ablation ladder A0 to A3) is in
-progress. The page reports no results until the runs are complete; every number added later must come from a run report.
+The Stage 1 evaluation (LIBERO-PRO from perception only, Pos and Task perturbations, with the ablation ladder C1, C2 and
+A0 to A3) is in progress; LIBERO-MAX and Meta-World follow in Stage 2. The page reports no results until the runs are complete; every number added later must come from a run report.
 
 ## Page
 

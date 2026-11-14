@@ -88,11 +88,11 @@
       <p class="pull">A handle mislocated by a few millimetres, a rim clipped during extraction or a grasp that slips leaves no trace
         in the agent's state. In a pilot on LIBERO-Spatial with such an agent and no world model (29 episodes), task completion
         was <b>0.448</b>, and the two contact-rich extraction tasks had <b>no successes</b>.</p>
-      <p class="pull">Our insight: contact needs <b>its own subspace</b>, its own asymmetric penalty around
-        irreversible failure, and a differentiable energy the agent can descend <b>before it actuates</b>.</p>
+      <p class="pull">Our insight: the quantity that decides success, the <b>state of contact</b> between gripper and scene,
+        should be predicted as its own stream, read out as a <b>failure probability</b>, and offered to the agent as a choice
+        among motions <b>before it actuates</b>.</p>
       <p class="pull" style="margin-bottom:0"><b>Central question.</b> Under object-position and task shifts that break end-to-end
-        VLAs, does an Agentic Policy grounded in a latent world model keep its success, and does the model's verification
-        stay reliable?</p>
+        VLAs, does an Agentic Policy grounded in a latent world model keep its success?</p>
     </div>
   </section>
 
@@ -115,7 +115,8 @@
             threshold runs; otherwise 16 via-point paths to the same goal are scored in one rollout and the lowest is kept.
             A failure triggers recovery: interception, retreat, re-observation and re-synthesis.</p></div>
       </div>
-      <p class="note">The failure head is supervised and calibrated on training cells only; proprioceptive failure anchors are kept as an ablation.</p>
+      <p class="note">The world model and failure head train only on LIBERO demonstration replays, and the threshold is set on
+        validation motion calls. Gradient refinement in place of sample-and-select is kept as an ablation.</p>
     </div>
   </section>
 
@@ -125,12 +126,13 @@
       <div class="head"><span class="kicker k3">Evaluation plan</span><h2>A protocol built to attribute every gain</h2></div>
       <p class="pull">LIBERO-PRO from perception only: the Object, Goal and Spatial suites under the Pos and Task perturbations,
         six cells. Language-model proposals are cached and replayed, each ablation changes one component, and test failures
-        are counted from simulator contact labels that neither the agent nor the world model sees.</p>
+        are counted from simulator contact labels that neither the agent nor the world model sees. Stage 2 extends the same
+        protocol to LIBERO-MAX, with events that change the scene during execution, and to Meta-World MT50.</p>
       <figure class="fig fig-narrow" style="margin-top:0">
         <img src="static/images/sim_frameworks.jpg" class="zoom" loading="lazy" width="1276" height="848"
              alt="Simulation frameworks: LIBERO-PRO Franka scenes and Meta-World MT50 Sawyer scenes">
         <figcaption><b>Simulation frameworks.</b> Top: LIBERO-PRO (Franka), Pos and Task perturbations. Bottom: Meta-World MT50 (Sawyer),
-          preliminary transfer.</figcaption>
+          planned for Stage 2.</figcaption>
       </figure>
 
       <h3 class="sub" style="margin-top:2.2rem">Ablation ladder <small>each row changes one component</small></h3>
@@ -139,23 +141,26 @@
           <thead><tr><th>Row</th><th style="text-align:left">Variant</th></tr></thead>
           <tbody>
             <tr><th></th><td style="text-align:left">No world model (the Agentic Policy alone)</td></tr>
+            <tr><th>C1</th><td style="text-align:left">Gate from proprioception, force and the planned actions, with select (no world model)</td></tr>
+            <tr><th>C2</th><td style="text-align:left">Gate from the frozen V-JEPA&nbsp;2 features at <i>t</i> and the planned actions, with select (no roll-out)</td></tr>
             <tr><th>A0</th><td style="text-align:left">A2, certify and raise only</td></tr>
-            <tr><th>A1</th><td style="text-align:left">Monolithic latent with refinement, equal capacity</td></tr>
-            <tr class="ours"><th>A2</th><td style="text-align:left">+ scene/contact factorisation (full system)</td></tr>
-            <tr><th>A3</th><td style="text-align:left">+ proprioceptive failure anchors and phase margin (ablation)</td></tr>
+            <tr><th>A1</th><td style="text-align:left">Monolithic predictor with select, equal depth</td></tr>
+            <tr class="ours"><th>A2</th><td style="text-align:left">Dual-track hierarchical world model with select (full system)</td></tr>
+            <tr><th>A3</th><td style="text-align:left">A2 with gradient refinement in place of select</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="hyp">
-        <div class="idea"><span class="n">H1 &middot; RQ1</span><h3>Verification holds under shift</h3>
-          <p>On shifted cells, A2's failure score ranks chunks that end in a simulator-counted failure above the rest better
-            than the stronger of a proprioception-only and an action-only control.</p></div>
-        <div class="idea"><span class="n">H2 &middot; RQ2</span><h3>The contact subspace helps</h3>
-          <p>On the same cells, A2's failure AUROC exceeds the monolithic A1's, and its contact track probes contact better.</p></div>
-        <div class="idea"><span class="n">H3 &middot; RQ3</span><h3>Fewer failures in closed loop</h3>
-          <p>With paired replay at an equal cap on language-model calls, A2 has fewer simulator-counted failures per episode
-            than the agent without a world model, with no lower completion.</p></div>
+        <div class="idea"><span class="n">H1 &middot; RQ1</span><h3>Robust under shift</h3>
+          <p>With paired replay at an equal cap on language-model calls, A2 completes more episodes than the agent without a
+            world model in the Pos and Task cells of LIBERO-PRO, with fewer failures per episode.</p></div>
+        <div class="idea"><span class="n">H2 &middot; RQ2</span><h3>The gain comes from prediction</h3>
+          <p>A2 exceeds C2, which sees the same actions and candidates without a roll-out, and A1, the monolithic predictor at
+            an equal number of training steps.</p></div>
+        <div class="idea"><span class="n">H3 &middot; RQ3</span><h3>Selection carries the gain, fast</h3>
+          <p>A2 completes more episodes than A0, which certifies and raises without selecting, and matches A3 at a lower gate
+            latency that stays below the agent's own planning time per motion.</p></div>
       </div>
       <p class="note">Each hypothesis is falsified if the 95% bootstrap interval of its difference contains zero. Results will be added
         once the runs are complete.</p>
