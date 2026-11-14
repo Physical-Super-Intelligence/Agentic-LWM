@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model</title>
-  <meta name="description" content="Agentic-LWM: a robot coding agent rehearses its program in a world model learned only from demonstrations, reads the imagined trace, repairs the program and executes it once.">
+  <meta name="description" content="Agentic-LWM: a robot coding agent rehearses its program in a world model learned only from demonstrations, reads the imagined trace, repairs the program and executes it call by call, re-anchoring the rehearsal on every real observation.">
   <meta name="theme-color" content="#0e7490">
   <link rel="canonical" href="https://physical-super-intelligence.github.io/Agentic-LWM/">
   <meta property="og:type" content="article">
@@ -70,12 +70,13 @@
 
       <figure class="fig" style="margin-top:2.4rem">
         <img src="static/images/framework.jpg" class="zoom" loading="eager" width="2600" height="1112"
-             alt="Agentic-LWM overview: the Agentic Policy writes a program, the Dream API runs it in the code-conditioned world model where each API call conditions one macro step and micro motor steps refine only the contact calls, a scene readout gives the imagined trace with a predicted failure, the agent repairs the program, and the robot executes it once with recovery as fallback">
+             alt="Agentic-LWM overview in five stages: observe the real scene; the Agentic Policy writes a program; the code-conditioned hierarchical world model rehearses it, each API call conditioning one macro step of an ensemble of heads on frozen V-JEPA 2 tokens, micro motor steps refining contact or unsettled calls and a scene readout after each call; an accept gate sends a predicted failure back for repair; the accepted program runs call by call, each real observation re-anchoring the rehearsal, with recovery after a real failure">
         <figcaption><b>Agentic-LWM: rehearsal in imagination.</b> The Agentic Policy writes a program from the instruction and
-          the real observation. The Dream API runs it unchanged in the code-conditioned world model: each API call conditions
-          one macro step in the latent space of frozen V-JEPA&nbsp;2 tokens, micro motor steps refine only the contact calls,
-          and a scene readout after each call yields the imagined trace. A predicted failure sends the trace back to the agent
-          for repair; the repaired program is executed once, with recovery as fallback.</figcaption>
+          the real observation. The Dream API runs it unchanged in the code-conditioned hierarchical world model: each API call
+          conditions one macro step of an ensemble of heads on frozen V-JEPA&nbsp;2 tokens, micro motor steps refine contact or
+          unsettled calls, and a scene readout yields the imagined trace. A predicted failure the ensemble agrees on returns to
+          the agent for repair; an accepted program runs call by call, each real observation re-anchoring the rehearsal, with
+          recovery as fallback.</figcaption>
       </figure>
     </div>
   </header>
@@ -92,14 +93,15 @@
       <p class="pull" style="margin-bottom:0">From <b>trial-and-error execution</b> to <b>rehearsal in imagination</b>. The
         core innovation is a world model that executes the agent's own code: its high level is conditioned on the code,
         predicting the latent state after each API call from the call's function name and arguments, and it returns a
-        predicted execution trace that the agent reads and repairs against.</p>
+        predicted execution trace that the agent reads and repairs against. Rehearsal recedes with execution, restarting from
+        each real observation, and an uncertainty gate trusts only the calls the model agrees on.</p>
     </div>
   </section>
 
   <!-- Method -->
   <section class="band" id="method">
     <div class="wrap">
-      <div class="head"><span class="kicker k2">Method</span><h2>Imagine, repair, then act once</h2></div>
+      <div class="head"><span class="kicker k2">Method</span><h2>Imagine, repair, then act call by call</h2></div>
       <p class="note" style="margin:0 0 1.2rem">The Agentic Policy is a frozen vision-language model (Gemini) that writes
         Python against a perception and motion API, with retreat after a failed turn, a grasp check in meters, re-observation
         and re-synthesis; our agent builds on an <a href="https://proceedings.mlr.press/v306/fu26u.html">open-source coding-agent
@@ -108,30 +110,37 @@
         end-effector delta actions. The four parts below are the Stage 1 design built on these; the planner stays frozen and
         outside the world model.</p>
       <div class="ideas">
-        <div class="idea"><span class="n">01</span><h3>Code-conditioned world model</h3>
+        <div class="idea"><span class="n">01</span><h3>Code-conditioned hierarchical world model</h3>
           <p>Each macro step predicts the latent state after one API call from the current latent and an embedding of the
-            call itself: a learned token for the function name, the object it acts on through a frozen text encoder, and its
-            numeric arguments as values. The micro level stays on the compiled motor actions at 5&nbsp;Hz and refines only the
-            contact calls (<code>close_gripper</code>, <code>open_gripper</code>, pushes). Call labels come free from the
-            demonstrations: replays are cut at gripper events and end-effector stops and labelled by rules on the stored
-            simulator state, with no language-model labels.</p></div>
+            call itself: a learned token for the function name, its numeric arguments as values, and the object it acts on,
+            grounded in what the frozen encoder sees (V-JEPA&nbsp;2 tokens pooled under the mask the agent's own
+            <code>segment_sam3_text_prompt</code> returns, with the text prompt as a second key). The macro level is an
+            ensemble of small heads on a shared trunk; a call is settled only when the heads agree. The micro level stays on
+            the compiled motor actions at 5&nbsp;Hz and refines the contact calls (<code>close_gripper</code>,
+            <code>open_gripper</code>), every unsettled call and every motion whose path passes near an object. Call labels
+            come free from the demonstrations: replays are cut at gripper events and end-effector stops and labelled by rules
+            on the stored simulator state, with no language-model labels.</p></div>
         <div class="idea"><span class="n">02</span><h3>Scene readout</h3>
           <p>A small head reads every predicted state: object positions, the object in hand, finger and arm contacts, and
             which goal conditions hold. It is supervised by the simulator state stored in the demonstration replays (object
             poses, evaluator contacts, LIBERO's success check) and by the task's goal predicates.</p></div>
         <div class="idea"><span class="n">03</span><h3>Dream API</h3>
-          <p>An imagined backend with the same function signatures, so the agent's program runs unchanged. Perception before
-            any motion uses the real observation; each motion or gripper call conditions one macro step; grasp checks and
-            later perception calls answer from the readout. The world model is latent and decodes no pixels.</p></div>
+          <p>An imagined backend with the same function signatures, so the agent's program runs unchanged. A rehearsal starts
+            from the latest real observation; each motion or gripper call conditions one macro step; grasp checks and
+            perception calls after an imagined motion answer from the readout, and every call is marked settled or not. During
+            execution, perception reads the real observation. The world model is latent and decodes no pixels.</p></div>
         <div class="idea"><span class="n">04</span><h3>Imagine, Repair, Act</h3>
-          <p>The agent rehearses its program, reads the predicted trace (per call: readout and a predicted failure event with
-            its call index), edits the program and rehearses again within a fixed budget, then executes once for real. The
-            recovery loop stays as the fallback after a real failure, and every real retry is counted.</p></div>
+          <p>The agent rehearses its program and an accept gate reads the trace: a settled call predicted to fail, or unmet
+            goal conditions, send the program back for repair within a fixed budget. Otherwise the robot executes the next call
+            only; the real observation then replaces the imagined latent and the remaining calls are rehearsed again, so a
+            suffix now predicted to fail is repaired before the next real call, and a call that stays unsettled is executed
+            and read from reality instead of guessed. The recovery loop stays as the fallback after a real failure, and every
+            real retry is counted.</p></div>
       </div>
       <p class="note">Trained only on LIBERO demonstrations, replayed through the agent's own move primitive with perturbations
-        that supply failures; never on agent episodes. Limitations we test rather than assume: error compounds over long
-        programs, and an offline test of an action-level version found that predicted futures did not beat current-frame
-        features on shifted replays, which is why code conditioning and the readout are the Stage 1 changes.</p>
+        that supply failures; never on agent episodes. An offline test of an action-level, fixed-stride version found that
+        predicted futures did not beat current-frame features on shifted replays, which is why the model now steps on the
+        agent's calls and reads the scene out.</p>
     </div>
   </section>
 
@@ -164,8 +173,9 @@
         </table>
       </div>
       <p class="note">Metrics: first-execution completion, final completion, real retries and Gemini calls per episode,
-        rehearsal latency, and per-call agreement between the predicted and the real readout. The ablation suite is the one
-        with the lowest R0 first-execution completion, fixed after R0 and before any rehearsal run.</p>
+        rehearsal latency, and per-call agreement between the predicted and the real readout. Suffix repairs during execution
+        are logged apart and do not count as completion at first execution. R1 to R5 share the call-by-call act. The ablation
+        suite is the one with the lowest R0 first-execution completion, fixed after R0 and before any rehearsal run.</p>
 
       <div class="hyp">
         <div class="idea"><span class="n">Q1 &middot; H1</span><h3>Does rehearsal make the first execution more reliable under shift?</h3>
@@ -173,8 +183,9 @@
             contains zero. R1 separates the value of rehearsal from world-model fidelity.</p></div>
         <div class="idea"><span class="n">Q2 &middot; H2</span><h3>Does a world model conditioned on the agent's calls rehearse better than one on motor actions?</h3>
           <p>On the same programs, code-conditioned rehearsal (R5) beats action-level rehearsal (R2) in first-execution
-            completion and in per-call trace agreement, and the gap
-            grows with program length. Refuted if either difference or the growth contains zero.</p></div>
+            completion and in per-call trace agreement, and the gap grows with the rehearsal horizon. Refuted if either
+            difference or the growth contains zero. At no extra cost, the R5 logs also test that agreement is higher on
+            settled than on unsettled calls and count how often re-anchoring triggers a suffix repair.</p></div>
         <div class="idea"><span class="n">Q3 &middot; H3</span><h3>What must the agent see to fix its code?</h3>
           <p>At an equal cap on Gemini calls, first-execution completion rises from R3 (flag) to R4 (event and call index)
             to R5 (full trace). Refuted for each step whose paired interval contains zero.</p></div>

@@ -14,14 +14,20 @@ program against a perception and motion API; the agent builds on an
 program runs in a hierarchical world model over frozen V-JEPA 2 tokens whose high level is conditioned on the code: each
 macro step predicts the latent state after one API call from the call's function name and arguments. A scene readout
 after each call gives object positions, the object in hand, contacts and goal conditions. The agent reads the imagined
-trace, repairs the program and executes it once for real, with its recovery loop as the fallback.
+trace and repairs the program; an accept gate passes only calls the model agrees on, and the program then runs call by
+call, each real observation re-anchoring the rehearsal of the remaining calls, with the recovery loop as the fallback.
 
-- **Code-conditioned world model**: one macro step per API call, embedded from a learned primitive token, the object
-  through a frozen text encoder and the numeric arguments; the micro level at 5 Hz on the compiled motor actions refines
-  only the contact calls; call labels come from demonstration replays by rules on stored simulator state.
+- **Code-conditioned hierarchical world model**: one macro step per API call, embedded from a learned primitive token,
+  the numeric arguments and the object, grounded as V-JEPA 2 tokens pooled under the agent's own segmentation mask with
+  the text prompt as a second key; an ensemble of macro heads marks the calls it cannot settle; the micro level at 5 Hz
+  on the compiled motor actions refines contact calls, unsettled calls and motions that pass near an object; call labels
+  come from demonstration replays by rules on stored simulator state.
 - **Scene readout**: supervised by simulator state stored in LIBERO demonstration replays and by goal predicates.
-- **Dream API**: same function signatures as the real API; perception after a motion answers from the readout.
-- **Imagine, Repair, Act**: rehearse within a fixed budget, execute once, count every real retry.
+- **Dream API**: same function signatures as the real API; a rehearsal starts from the latest real observation, and
+  perception after an imagined motion answers from the readout.
+- **Imagine, Repair, Act**: an accept gate sends settled predicted failures back for repair within a fixed budget; the
+  robot executes one call at a time, re-anchors on the real observation and re-rehearses the remaining calls; every real
+  retry is counted.
 
 ## Status
 
