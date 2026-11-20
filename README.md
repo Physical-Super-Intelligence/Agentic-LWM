@@ -1,6 +1,6 @@
 # Agentic-LWM: Grounding Multimodal Policies in Hierarchical Latent World Model
 
-Project page: <https://physical-super-intelligence.github.io/Agentic-LWM/> (in preparation, RSS 2027).
+Project page: <https://physical-super-intelligence.github.io/Agentic-LWM/> (under review, RSS 2027).
 
 ![Agentic-LWM overview](static/images/framework.jpg)
 
